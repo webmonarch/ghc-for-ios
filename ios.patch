@@ -1,0 +1,69 @@
+--- ./rts/posix/GetTime.c.og	2021-10-05 21:58:56.000000000 -0700
++++ ./rts/posix/GetTime.c	2021-10-05 21:59:04.000000000 -0700
+@@ -25,7 +25,7 @@
+ #error No implementation for getProcessCPUTime() available.
+ #endif
+ 
+-#if defined(darwin_HOST_OS)
++#if defined(darwin_HOST_OS) || defined(ios_HOST_OS)
+ #include <mach/mach_time.h>
+ #include <mach/mach_init.h>
+ #include <mach/thread_act.h>
+@@ -36,14 +36,14 @@
+ // we'll implement getProcessCPUTime() and getProcessElapsedTime()
+ // separately, using getrusage() and gettimeofday() respectively
+ 
+-#if defined(darwin_HOST_OS)
++#if defined(darwin_HOST_OS) || defined(ios_HOST_OS)
+ static uint64_t timer_scaling_factor_numer = 0;
+ static uint64_t timer_scaling_factor_denom = 0;
+ #endif
+ 
+ void initializeTimer()
+ {
+-#if defined(darwin_HOST_OS)
++#if defined(darwin_HOST_OS) || defined(ios_HOST_OS)
+     mach_timebase_info_data_t info;
+     (void) mach_timebase_info(&info);
+     timer_scaling_factor_numer = (uint64_t)info.numer;
+@@ -70,7 +70,7 @@
+     // N.B. Since macOS Catalina, Darwin supports clock_gettime but does not
+     // support clock_getcpuclockid. Hence we prefer to use the Darwin-specific
+     // path on Darwin, even if clock_gettime is available.
+-#if defined(darwin_HOST_OS)
++#if defined(darwin_HOST_OS) || defined(ios_HOST_OS)
+     thread_basic_info_data_t info = { };
+     mach_msg_type_number_t info_count = THREAD_BASIC_INFO_COUNT;
+     kern_return_t kern_err = thread_info(mach_thread_self(), THREAD_BASIC_INFO,
+--- ./rts/sm/Storage.c.og	2021-06-29 00:24:51.000000000 -0700
++++ ./rts/sm/Storage.c	2021-10-05 22:07:59.000000000 -0700
+@@ -1644,7 +1644,7 @@
+     RELEASE_SM_LOCK
+ }
+ 
+-#elif defined(USE_LIBFFI_FOR_ADJUSTORS) && defined(darwin_HOST_OS)
++#elif defined(USE_LIBFFI_FOR_ADJUSTORS) && (defined(ios_HOST_OS) || defined(darwin_HOST_OS))
+ 
+ static HashTable* allocatedExecs;
+ 
+--- ./includes/rts/storage/GC.h.og	2021-10-05 21:58:57.000000000 -0700
++++ ./includes/rts/storage/GC.h	2021-10-05 21:59:04.000000000 -0700
+@@ -199,7 +199,7 @@
+ 
+ AdjustorWritable allocateExec(W_ len, AdjustorExecutable *exec_addr);
+ void flushExec(W_ len, AdjustorExecutable exec_addr);
+-#if defined(darwin_HOST_OS)
++#if defined(darwin_HOST_OS) || defined(ios_HOST_OS)
+ AdjustorWritable execToWritable(AdjustorExecutable exec);
+ #endif
+ 
+--- ./llvm-targets.og	2021-10-05 21:58:57.000000000 -0700
++++ ./llvm-targets	2021-10-05 21:59:04.000000000 -0700
+@@ -40,6 +40,7 @@
+ ,("aarch64-apple-darwin", ("e-m:o-i64:64-i128:128-n32:64-S128", "apple-a7", "+fp-armv8 +neon +crypto +zcm +zcz +sha2 +aes"))
+ ,("armv7-apple-ios", ("e-m:o-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32", "generic", ""))
+ ,("aarch64-apple-ios", ("e-m:o-i64:64-i128:128-n32:64-S128", "apple-a7", "+fp-armv8 +neon +crypto +zcm +zcz +sha2 +aes"))
++,("arm64-apple-ios", ("e-m:o-i64:64-i128:128-n32:64-S128", "apple-a7", "+fp-armv8 +neon +crypto +zcm +zcz +sha2 +aes"))
+ ,("i386-apple-ios", ("e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-f64:32:64-f80:128-n8:16:32-S128", "yonah", ""))
+ ,("x86_64-apple-ios", ("e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128", "core2", ""))
+ ,("amd64-portbld-freebsd", ("e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128", "x86-64", ""))

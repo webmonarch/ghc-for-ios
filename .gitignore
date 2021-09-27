@@ -1,3 +1,6 @@
 /ghc-*/
 /libffi/
 /ghc-*.tar.xz
+/wrapper
+
+/.idea/
