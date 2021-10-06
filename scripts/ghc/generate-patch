@@ -1,0 +1,15 @@
+#!/bin/bash
+
+## Generates an ios.patch file by diffing files found ending in .og
+
+set -e
+
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+source "${SCRIPT_DIR}/ghc.env"
+
+true > "${GHC_PATCH_PATH}"
+
+pushd "${GHC_BUILD_SRC_DIR}"
+find . -type f -name '*.og' | while IFS= read -r f; do
+  diff -u "$f" "${f%.og}" >> "${GHC_PATCH_PATH}"
+done

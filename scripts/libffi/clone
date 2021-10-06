@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+set -e
+
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+source "${SCRIPT_DIR}/libffi.env"
+
+git clone "${LIBFFI_GIT_URL}" "${LIBFFI_BUILD_DIR}"

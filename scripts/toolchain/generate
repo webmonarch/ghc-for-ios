@@ -1,16 +1,18 @@
 #!/bin/bash
 
+## Setup toolchain wrapper script (which delegates to xcrun)
+## From: [A Haskell Cross Compiler for iOS](https://medium.com/@zw3rk/a-haskell-cross-compiler-for-ios-7cc009abe208)
+
 set -e
 
-WRAPPER_DIR=./wrapper
-WRAPPER_SH=wrapper
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-rm -rf ${WRAPPER_DIR} || true
-mkdir ${WRAPPER_DIR} || true
+source "${SCRIPT_DIR}/toolchain.env"
 
-pushd ${WRAPPER_DIR}
+rm -rf "${TOOLCHAIN_BUILD_DIR}" || true
+mkdir "${TOOLCHAIN_BUILD_DIR}" || true
 
-cat << 'EOF' > ${WRAPPER_SH}
+cat << 'EOF' > "${TOOLCHAIN_WRAPPER_PATH}"
 #!/bin/bash
 name=${0##*/}
 cmd=${name##*-}
@@ -55,10 +57,10 @@ esac
 exec $cmd $flags "$@"
 EOF
 
-chmod +x ${WRAPPER_SH}
+chmod +x "${TOOLCHAIN_WRAPPER_PATH}"
 
 for target in aarch64-apple-ios x86_64-apple-ios; do
   for command in clang ld ld.gold nm ar ranlib cabal; do
-    ln -s ${WRAPPER_SH} $target-$command
+    ln -s ./wrapper "${TOOLCHAIN_BIN_DIR}/$target-$command"
   done
 done
