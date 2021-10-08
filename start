@@ -1,0 +1,276 @@
+#!/bin/bash
+
+##
+## Main entry script for retrieving and compiling GHC + friends
+##
+
+set -e
+set -x
+
+# ***************************
+# ENV
+# ***************************
+
+LLVM_BIN_DIR=/usr/local/opt/llvm/bin
+
+# Directory this script is in
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+SELF="$0"
+
+# base
+PROJECT_DIR="${SCRIPT_DIR}"
+BUILD_DIR="${SCRIPT_DIR}/build"
+INSTALL_DIR="${BUILD_DIR}/dist"
+
+# toolchain wrapper
+TOOLCHAIN_BUILD_DIR="${BUILD_DIR}/toolchain"
+TOOLCHAIN_BIN_DIR="${TOOLCHAIN_BUILD_DIR}"
+TOOLCHAIN_WRAPPER_PATH="${TOOLCHAIN_BIN_DIR}/wrapper"
+
+# libffi
+LIBFFI_GIT_URL=https://github.com/libffi/libffi.git
+LIBFFI_BUILD_DIR="${BUILD_DIR}/libffi"
+
+# ghc
+GHC_SRC_URL=https://downloads.haskell.org/~ghc/8.10.7/ghc-8.10.7-src.tar.xz
+GHC_SRC_FILENAME=$(basename "${GHC_SRC_URL}")
+GHC_BUILD_SRCTAR_PATH="${BUILD_DIR}/${GHC_SRC_FILENAME}"
+GHC_BUILD_SRC_DIR="${BUILD_DIR}/$(basename "${GHC_SRC_FILENAME}" -src.tar.xz)"
+GHC_PATCH_PATH=${PROJECT_DIR}/ios.patch
+
+# print bash commands suitable for setting up the environment
+bash_eval () {
+  echo export PATH=${TOOLCHAIN_BIN_DIR}:\$PATH
+  echo export PATH=${LLVM_BIN_DIR}:\$PATH
+}
+
+# PATH exports
+eval "$(bash_eval)"
+
+# ***************************
+# TOOLCHAIN
+# ***************************
+
+toolchain () {
+  rm -rf "${TOOLCHAIN_BUILD_DIR}" || true
+  mkdir "${TOOLCHAIN_BUILD_DIR}" || true
+
+  cat << 'EOF' > "${TOOLCHAIN_WRAPPER_PATH}"
+#!/bin/bash
+name=${0##*/}
+cmd=${name##*-}
+target=${name%-*}
+case $name in
+ *-cabal)
+  fcommon="--builddir=dist/${target}"
+  fcompile=" --with-ghc=${target}-ghc"
+  fcompile+=" --with-ghc-pkg=${target}-ghc-pkg"
+  fcompile+=" --with-gcc=${target}-clang"
+  fcompile+=" --with-ld=${target}-ld"
+  fcompile+=" --hsc2hs-options=--cross-compile"
+  fconfig="--disable-shared --configure-option=--host=${target}"
+  case $1 in
+   configure|install) flags="${fcommon} ${fcompile} ${fconfig}" ;;
+   build)             flags="${fcommon} ${fcompile}" ;;
+   list|info|update)  flags="" ;;
+   "")                flags="" ;;
+   *)                 flags=$fcommon ;;
+  esac
+  ;;
+ aarch64-apple-ios-clang|aarch64-apple-ios-ld)
+  flags="--sdk iphoneos ${cmd} -arch arm64"
+  cmd="xcrun"
+  ;;
+ aarch64-apple-ios-*|aarch64-apple-ios-*)
+  flags="--sdk iphoneos ${cmd}"
+  cmd="xcrun"
+  ;;
+ x86_64-apple-ios-clang|x86_64-apple-ios-ld)
+  flags="--sdk iphonesimulator ${cmd} -arch x86_64"
+  cmd="xcrun"
+  ;;
+ x86_64-apple-ios-*)
+  flags="--sdk iphonesimulator ${cmd}"
+  cmd="xcrun"
+  ;;
+ # default
+ *-nm|*-ar|*-ranlib) ;;
+ *) echo "Unknown command: ${0##*/}" >&2; exit 1;;
+esac
+exec $cmd $flags "$@"
+EOF
+
+  chmod +x "${TOOLCHAIN_WRAPPER_PATH}"
+
+  for target in aarch64-apple-ios x86_64-apple-ios; do
+    for command in clang ld ld.gold nm ar ranlib cabal; do
+      ln -s ./wrapper "${TOOLCHAIN_BIN_DIR}/$target-$command"
+    done
+  done
+}
+
+# ***************************
+# LIBFFI
+# ***************************
+
+libffi_clone () {
+  rm -rf "${LIBFFI_BUILD_DIR}"
+  git clone "${LIBFFI_GIT_URL}" "${LIBFFI_BUILD_DIR}"
+}
+
+libffi_build () {
+  TARGET=$1
+
+  pushd "${LIBFFI_BUILD_DIR}"
+
+  git clean -xfd
+
+  ./autogen.sh
+
+  CC="${TARGET}-clang" \
+  CXX="${TARGET}-clang" \
+    ./configure \
+      --prefix="${INSTALL_DIR}/${TARGET}" \
+      --host=${TARGET} \
+      --enable-static=yes --enable-shared=yes
+
+  make -j && make install
+}
+
+# ***************************
+# GHC
+# ***************************
+
+ghc_download () {
+  mkdir -p "${BUILD_DIR}"
+  wget -c "${GHC_SRC_URL}" -O "${GHC_BUILD_SRCTAR_PATH}"
+
+  rm -rf "${GHC_BUILD_SRC_DIR}" || true
+  tar xvf "${GHC_BUILD_SRCTAR_PATH}" --directory "${BUILD_DIR}"
+}
+
+ghc_patch () {
+  pushd "${GHC_BUILD_SRC_DIR}"
+  patch -p0 -b -z.og < "${GHC_PATCH_PATH}"
+}
+
+ghc_generate_patch () {
+  true > "${GHC_PATCH_PATH}"
+
+  pushd "${GHC_BUILD_SRC_DIR}"
+  find . -type f -name '*.og' | while IFS= read -r f; do
+    diff -u "$f" "${f%.og}" >> "${GHC_PATCH_PATH}" || true
+  done
+}
+
+ghc_prepare () {
+  TARGET=x86_64-apple-ios
+
+  pushd "${GHC_BUILD_SRC_DIR}"
+
+  make clean
+  make distclean
+
+  sed -E "s/^#(BuildFlavour[ ]+= quick-cross)$/\1/" \
+      mk/build.mk.sample > mk/build.mk
+
+  ./boot
+
+  ./configure --target=${TARGET} \
+              --prefix="${INSTALL_DIR}/${TARGET}" \
+              --disable-large-address-space \
+              --with-ffi-includes="${INSTALL_DIR}/${TARGET}/include" \
+              --with-ffi-libraries="${INSTALL_DIR}/${TARGET}/lib"
+}
+
+ghc_build () {
+  pushd "${GHC_BUILD_SRC_DIR}"
+
+  make -j
+  make install
+}
+
+help () {
+cat << EOF
+Usage: $0 <COMMAND>
+
+Commands:
+  - toolchain           setup xcrun wrapper command and symlink aliases
+  - libffi <COMMAND>    build libffi from source
+    - clone
+    - build
+  - ghc <COMMAND>       get and build GHC from source
+    - download
+    - patch
+    - generate-patch
+    - prepare
+    - build
+
+
+Examples:
+  $0 toolchain
+  $0 libffi clone
+  $0 libffi build
+
+EOF
+}
+
+# ***************************
+# MAIN
+# ***************************
+
+COMMAND=$1 || true
+shift || true
+
+case $COMMAND in
+  toolchain) toolchain ;;
+  libffi)
+      COMMAND2=$1 || true
+      shift || true
+
+      case $COMMAND2 in
+        clone | download)
+          libffi_clone
+          ;;
+        build)
+          libffi_build x86_64-apple-ios
+          ;;
+        help | *)
+          help
+          exit 1
+          ;;
+      esac
+    ;;
+  ghc)
+      COMMAND2=$1 || true
+      shift || true
+
+      case $COMMAND2 in
+        download)
+          ghc_download
+          ;;
+        patch)
+          ghc_patch
+          ;;
+        generate-patch)
+          ghc_generate_patch
+          ;;
+        prepare)
+          ghc_prepare
+          ;;
+        build)
+          ghc_build
+          ;;
+        help | *)
+          help
+          exit 1
+          ;;
+      esac
+    ;;
+  bash) bash_eval ;;
+  *)
+    help
+    exit 1
+    ;;
+esac

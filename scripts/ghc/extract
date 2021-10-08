@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-
-set -e
-
-SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-source "${SCRIPT_DIR}/ghc.env"
-
-rm -rf "${GHC_BUILD_SRC_DIR}" || true
-tar xvf "${GHC_BUILD_SRCTAR_PATH}" --directory "${BUILD_DIR}"
