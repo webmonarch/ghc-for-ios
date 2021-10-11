@@ -1,5 +1,7 @@
-/libffi/
-/wrapper
-
 /.idea/
 /build/
+
+/*.log
+
+# ignore xcode userdate
+**/*.xcodeproj/**/xcuserdata/

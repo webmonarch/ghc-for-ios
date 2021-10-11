@@ -98,6 +98,7 @@ case $name in
  *-nm|*-ar|*-ranlib) ;;
  *) echo "Unknown command: ${0##*/}" >&2; exit 1;;
 esac
+
 exec $cmd $flags "$@"
 EOF
 
@@ -165,7 +166,7 @@ ghc_generate_patch () {
 }
 
 ghc_prepare () {
-  TARGET=x86_64-apple-ios
+  TARGET=$1
 
   pushd "${GHC_BUILD_SRC_DIR}"
 
@@ -177,6 +178,10 @@ ghc_prepare () {
 
   ./boot
 
+  CONF_CC_OPTS_STAGE2="-fembed-bitcode" \
+  CONF_CXX_OPTS_STAGE2="-fembed-bitcode" \
+  CONF_LD_LINKER_OPTS_STAGE2="-bitcode_bundle" \
+  MergeObjsArgs="-r -bitcode_bundle" \
   ./configure --target=${TARGET} \
               --prefix="${INSTALL_DIR}/${TARGET}" \
               --disable-large-address-space \
@@ -235,6 +240,7 @@ case $COMMAND in
           ;;
         build)
           libffi_build x86_64-apple-ios
+          libffi_build aarch64-apple-ios
           ;;
         help | *)
           help
@@ -257,7 +263,7 @@ case $COMMAND in
           ghc_generate_patch
           ;;
         prepare)
-          ghc_prepare
+          ghc_prepare aarch64-apple-ios
           ;;
         build)
           ghc_build
