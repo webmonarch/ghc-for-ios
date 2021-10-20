@@ -1,30 +1,67 @@
 Cross Compile GHC for iOS
 =========================
 
-Here are notes and scripts on cross compiling GHC for iOS, 
-with the intent of developing iOS apps using Haskell.
+Scripts and notes on cross-compiling [The Glasgow Haskell Compiler](https://www.haskell.org/ghc/) targeting iOS
+(device [aarch64/arm64] and simulator [x86_64]) with the goal of writing iOS applications in (largely) Haskell.
 
-### TODO
+## Why
 
-- [x] Build and run on simulator
-- [ ] Build and run on device
-- [ ] How to clear allocated memory
-- [ ] Parameterize which version to build (x86_64 vs aarch64)
-- [ ] Will Apple accept an Haskell project?
-- [ ] create 'all' targets to do everything
-- [ ] do we need libffi anymore?
-- 
+As Apple goes farther and farther into custom silicon, LLVM/bitcode, Swift and other requirements for iOS applications,
+GHC's built-in support for iOS is getting weaker and weaker. There seems to have been a flurry of interest around using 
+Haskell on iOS around 2017, but I had a hard time finding more recent resources.
 
-### Broad Strokes
+I am trying to see if I can create a non-trivial application in (largely) Haskell that Apple will accept on the iOS 
+App Store.
 
-1. Install base deps
-   1. xcode
-   2. `brew install ghc llvm cabal-install`
-2. Build libffi for iOS
-3. Build GHC
-    1. Setup build tool aliases for autotools
+The landscape will likely change very soon with the M1 chip and everything needing to support the LLVM/Clang/aarch64 
+toolchain if they want to run on new Macs.
 
-To build
+## Why Haskell
+
+The farther into my career I get, the more I appreciate typed programming languages. 
+Also, working with more and more programming languages, they are all kinda doing the same thing in different ways.
+Let's just use one language.
+
+## Getting Started
+
+Overall, we are:
+
+1. Installing dependencies
+2. Setup toolchain wrappers for use by GHC's autotools/make
+3. Cross-compiling GHC for device (aarch64/arm64) and iOS simulator (x86_64)
+4. Building Haskell lib for use by XCode/Swift iOS app
+5. Setup Xcode/Swift project to use build Haskell library
+6. Run on simulator!
+7. Run on device!
+
+### Dependencies
+
+* Need Xcode (developed on Xcode 13.0 / macOS Big Sur)
+* Install Homebrew deps
+
+```bash
+# llvm toolchain (opt, llc) used by GHC. Any modern version should work
+brew install llvm
+
+# base GHC installation to bootstrap the cross-compilation of GHC
+brew install ghc cabal-install
+```
+
+### Setup Toolchain
+
+We create a set of specially named wrapper scripts (naming convention used by autotools) which delegates to Xcode's 
+`xcrun`.
+
+```bash
+# create wrapper scripts and soft-links
+./start toolchain
+
+# add toolchain wrappers to PATH
+# export PATH=$PWD/build/toolchain:$PATH
+eval "$(./start bash)"
+```
+
+### Build GHC
 
 ```bash
 ./start ghc download
@@ -33,33 +70,7 @@ To build
 ./start ghc build 2>&1 | tee build.$(date +%F_%T).log
 ```
 
-Debugging afterwards
-
-```bash
-pushd build/ghc-8.10.7
-make -kj
-make -j1 2>&1 | subl
-```
-
-### Base Deps
-
-* Mac with xcode
-* GHC (to bootstrap with)
-* llvm
-* cabal-install
-
-Questions
-
-* alex
-  * provided with source distributions, if we used GIT, we would need to install these
-* happy
-  * provided with source distributions, if we used GIT, we would need to install these
-* Patched 
-  * `execToWritable`
-  * `clock_getcpuclockid`
-  * `llvm_targets`
-
-### Compiling Haskell Library
+### Build Haskell Library
 
 ```bash
 BUILD_OUT=build/hs-libs/x86_64 && \
@@ -86,12 +97,22 @@ mkdir -p ${BUILD_OUT} && \
   test/haskell-project/Lib.hs 2>&1 | subl -w
 ```
 
-### Setup XCode Project
+### Setup Xcode Project
 
-* add library
-* add `libiconv.tbd`
+1. Create Swift/SwiftUI iOS App
+2. Add bridging header
+3. Add external references to bridging header
+4. Init Haskell in `App.init`
+5. Add "Other Linker Flags": `-lhs`
+6. Add "Library Search Paths": `$(SRCROOT)/<PATH>/build/hs-libs/$(CURRENT_ARCH)`
+7. Add `libiconv.tbd` to Frameworks
 
-### Links
+### Run!
+
+Press play!
+
+
+## Links
 
 References:
 
@@ -101,9 +122,43 @@ References:
 * https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/9.0.1-notes.html#highlights
 * https://github.com/zw3rk/toolchain-wrapper
 * https://medium.com/@zw3rk/ghcs-cross-compilation-pipeline-ac88972466ec
+* [Rust on iOS](https://medium.com/visly/rust-on-ios-39f799b3c1dd)
 
+## TODO
+
+- [x] Build and run on simulator
+- [x] Build and run on device
+- [ ] How to clear allocated memory
+- [ ] Parameterize which version to build (x86_64 vs aarch64)
+- [ ] Will Apple accept an Haskell project?
+- [ ] Create 'all' targets to do everything
+- [ ] Do we need libffi anymore?
+- [ ] Add test suite
+- [ ] explain aarch64 and arm64
+
+Debugging afterwards
+
+```bash
+pushd build/ghc-8.10.7
+make -kj
+make -j1 2>&1 | subl
+```
 
 -----
+
+# 
+
+## Open Questions
+
+* alex
+  * provided with source distributions, if we used GIT, we would need to install these
+* happy
+  * provided with source distributions, if we used GIT, we would need to install these
+* Patched 
+  * `execToWritable`
+  * `clock_getcpuclockid`
+  * `llvm_targets`
+
 
 ### Debugging Bitcode
 

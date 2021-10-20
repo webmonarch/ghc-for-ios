@@ -182,7 +182,7 @@ ghc_prepare () {
   CONF_CXX_OPTS_STAGE2="-fembed-bitcode" \
   CONF_LD_LINKER_OPTS_STAGE2="-bitcode_bundle" \
   MergeObjsArgs="-r -bitcode_bundle" \
-  ./configure --target=${TARGET} \
+  ./configure --target="${TARGET}" \
               --prefix="${INSTALL_DIR}/${TARGET}" \
               --disable-large-address-space \
               --with-ffi-includes="${INSTALL_DIR}/${TARGET}/include" \
