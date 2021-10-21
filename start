@@ -54,7 +54,7 @@ eval "$(bash_eval)"
 
 toolchain () {
   rm -rf "${TOOLCHAIN_BUILD_DIR}" || true
-  mkdir "${TOOLCHAIN_BUILD_DIR}" || true
+  mkdir -p "${TOOLCHAIN_BUILD_DIR}" || true
 
   cat << 'EOF' > "${TOOLCHAIN_WRAPPER_PATH}"
 #!/bin/bash
@@ -206,6 +206,7 @@ Commands:
     - clone
     - build
   - ghc <COMMAND>       get and build GHC from source
+    - all <TARGET>      clean build of GHC for the specified TARGET platform [aarch64-apple-ios | x86_64-apple-ios]
     - download
     - patch
     - generate-patch
@@ -253,6 +254,13 @@ case $COMMAND in
       shift || true
 
       case $COMMAND2 in
+        all)
+          TARGET=${1:-aarch64-apple-ios}
+          ghc_download
+          ghc_patch
+          ghc_prepare "${TARGET}"
+          ghc_build
+          ;;
         download)
           ghc_download
           ;;
@@ -263,7 +271,8 @@ case $COMMAND in
           ghc_generate_patch
           ;;
         prepare)
-          ghc_prepare aarch64-apple-ios
+          TARGET=${1:-aarch64-apple-ios}
+          ghc_prepare "${TARGET}"
           ;;
         build)
           ghc_build
@@ -273,6 +282,9 @@ case $COMMAND in
           exit 1
           ;;
       esac
+    ;;
+  clean)
+    rm -rf "${BUILD_DIR}"
     ;;
   bash) bash_eval ;;
   *)
