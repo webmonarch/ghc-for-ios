@@ -73,28 +73,7 @@ eval "$(./start bash)"
 ### Build Haskell Library
 
 ```bash
-BUILD_OUT=build/hs-libs/x86_64 && \
-command rm -rf build/hs-libs/x86_64 && \
-mkdir -p ${BUILD_OUT} && \
-./build/dist/x86_64-apple-ios/bin/x86_64-apple-ios-ghc \
-  -odir build/hs-libs/x86_64/ \
-  -hidir build/hs-libs/x86_64/ \
-  -stubdir build/hs-libs/x86_64/ \
-  -lffi -Lbuild/dist/x86_64-apple-ios/lib \
-  -staticlib -o build/hs-libs/x86_64/libhs.a \
-  test/haskell-project/Lib.hs
-
-BUILD_OUT=build/hs-libs/arm64 && \
-command rm -rf build/hs-libs/arm64 && \
-mkdir -p ${BUILD_OUT} && \
-./build/dist/aarch64-apple-ios/bin/aarch64-apple-ios-ghc \
-  -v \
-  -odir ${BUILD_OUT} \
-  -hidir ${BUILD_OUT} \
-  -stubdir ${BUILD_OUT} \
-  -lffi -Lbuild/dist/aarch64-apple-ios/lib \
-  -staticlib -o ${BUILD_OUT}/libhs.a \
-  test/haskell-project/Lib.hs 2>&1 | subl -w
+./start haskell all
 ```
 
 ### Setup Xcode Project
