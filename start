@@ -39,6 +39,9 @@ GHC_BUILD_SRCTAR_PATH="${BUILD_DIR}/${GHC_SRC_FILENAME}"
 GHC_BUILD_SRC_DIR="${BUILD_DIR}/$(basename "${GHC_SRC_FILENAME}" -src.tar.xz)"
 GHC_PATCH_PATH=${PROJECT_DIR}/ios.patch
 
+# Haskell lib
+HASKELL_BUILD_DIR=${BUILD_DIR}/hs-libs
+
 # print bash commands suitable for setting up the environment
 bash_eval () {
   echo export PATH=${TOOLCHAIN_BIN_DIR}:\$PATH
@@ -196,6 +199,27 @@ ghc_build () {
   make install
 }
 
+haskell_build () {
+  TARGET=${1:-aarch64-apple-ios}
+  PLATFORM=$(echo "$TARGET" | cut -d- -f1)
+  if [[ "aarch64" = "${PLATFORM}" ]]; then
+    PLATFORM="arm64"
+  fi
+  BUILD_OUT="${HASKELL_BUILD_DIR}/${PLATFORM}"
+  GHC="${INSTALL_DIR}/${TARGET}/bin/${TARGET}-ghc"
+
+  command rm -rf "${BUILD_OUT}"
+  mkdir -p "${BUILD_OUT}"
+
+  $GHC \
+    -odir "${BUILD_OUT}" \
+    -hidir "${BUILD_OUT}" \
+    -stubdir "${BUILD_OUT}" \
+    -lffi -L"${INSTALL_DIR}/${TARGET}/lib" \
+    -staticlib -o "${BUILD_OUT}/libhs.a" \
+    test/haskell-project/Lib.hs
+}
+
 help () {
 cat << EOF
 Usage: $0 <COMMAND>
@@ -212,12 +236,16 @@ Commands:
     - generate-patch
     - prepare
     - build
-
+  - haskell
+    - all               builds haskell lib for all targets
+    - build <TARGET>    builds the haskell lib for the specified target
 
 Examples:
   $0 toolchain
   $0 libffi clone
   $0 libffi build
+  $0 ghc all
+  $0 haskell all
 
 EOF
 }
@@ -282,6 +310,24 @@ case $COMMAND in
           exit 1
           ;;
       esac
+    ;;
+  haskell)
+    COMMAND2=$1 || true
+    shift || true
+
+    case $COMMAND2 in
+      all)
+        haskell_build aarch64-apple-ios
+        haskell_build x86_64-apple-ios
+        ;;
+      build)
+        haskell_build $*
+        ;;
+      *)
+        help
+        exit 1
+        ;;
+    esac
     ;;
   clean)
     rm -rf "${BUILD_DIR}"
