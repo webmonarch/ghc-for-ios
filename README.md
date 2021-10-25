@@ -22,6 +22,22 @@ The farther into my career I get, the more I appreciate typed programming langua
 Also, working with more and more programming languages, they are all kinda doing the same thing in different ways.
 Let's just use one language.
 
+## TL;DR
+
+At the end of the day, this repo does three things:
+
+1. Patch GHC's source code with some things (See [./ios.patch](./ios.patch))
+2. Invoke GHC's `./configure` with some specific environment variables set (See `ghc_prepare` in [./start](./start))
+3. Provides a Haskell library and Xcode project to test everything with
+
+This was developed/tested on:
+
+* macOS Big Sur (11.5.2)
+* Xcode 13.0 (13A233)
+* iOS 15
+  * iPhone 12 Pro (real device)
+  * iPhone 12 Pro (simulator)
+
 ## Getting Started
 
 Overall, we are:
@@ -90,6 +106,38 @@ eval "$(./start bash)"
 
 Press play!
 
+## HELP!
+
+Something went wrong!
+
+Yeah, this is all pretty new. A lot of us are trying to figure this out and Apple is always changing...everything.
+
+Try these steps out to get a clear error message to report. Once you have this, feel free to file a bug. Maybe someone
+can help, or at the very least you'll have a clear repro so that you can try to fix yourself!
+
+```bash
+# setup environment variables with toolchain wrappers in the PATH
+eval "$(./start bash)"
+
+# go into the GHC source dir
+cd build/ghc-8.10.7
+
+# make everything that builds successfully so we can see the error more easily
+make -kj
+
+# make with no-parallelism so you can get a consistent error message
+make -j1
+# alternatively pipe it into a log file or sublime
+# make -j1 2>&1 | tee debug.log
+# make -j1 2>&1 | subl
+```
+
+GHC's make files are pretty complicated. Make's `--print-data-base` shows what command is invoked for each target.
+NOTE that GHC's make files are setup to run multiple times (one for each phase). 
+
+```bash
+make --print-data-base
+```
 
 ## Links
 
@@ -102,6 +150,7 @@ References:
 * https://github.com/zw3rk/toolchain-wrapper
 * https://medium.com/@zw3rk/ghcs-cross-compilation-pipeline-ac88972466ec
 * [Rust on iOS](https://medium.com/visly/rust-on-ios-39f799b3c1dd)
+* [nanotech/swift-haskell-tutorial](https://github.com/nanotech/swift-haskell-tutorial)
 
 ## TODO
 
