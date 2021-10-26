@@ -52,6 +52,26 @@ bash_eval () {
 eval "$(bash_eval)"
 
 # ***************************
+# ALL
+# ***************************
+
+deps () {
+  brew install automake llvm ghc cabal-install
+}
+
+all () {
+  TARGETS=${*:-x86_64-apple-ios aarch64-apple-ios}
+
+  $SELF clean
+  $SELF toolchain
+
+  for TARGET in $TARGETS; do
+    $SELF ghc all "$TARGET"
+    $SELF haskell build "$TARGET"
+  done
+}
+
+# ***************************
 # TOOLCHAIN
 # ***************************
 
@@ -225,6 +245,8 @@ cat << EOF
 Usage: $0 <COMMAND>
 
 Commands:
+  - deps                install dependencies via Homebrew
+  - all [T1] [T2] ...   clean build GHC and compile Haskell library for each specified target(s) (default x86_64-apple-ios aarch64-apple-ios)
   - toolchain           setup xcrun wrapper command and symlink aliases
   - libffi <COMMAND>    build libffi from source
     - clone
@@ -258,6 +280,12 @@ COMMAND=$1 || true
 shift || true
 
 case $COMMAND in
+  deps)
+    deps
+    ;;
+  all)
+    all "$@"
+    ;;
   toolchain) toolchain ;;
   libffi)
       COMMAND2=$1 || true
@@ -321,7 +349,7 @@ case $COMMAND in
         haskell_build x86_64-apple-ios
         ;;
       build)
-        haskell_build $*
+        haskell_build "$@"
         ;;
       *)
         help
