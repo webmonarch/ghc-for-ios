@@ -193,23 +193,21 @@ ghc_prepare () {
 
   pushd "${GHC_BUILD_SRC_DIR}"
 
-  make clean
-  make distclean
-
   sed -E "s/^#(BuildFlavour[ ]+= quick-cross)$/\1/" \
       mk/build.mk.sample > mk/build.mk
 
   ./boot
 
-  CONF_CC_OPTS_STAGE2="-fembed-bitcode" \
-  CONF_CXX_OPTS_STAGE2="-fembed-bitcode" \
-  CONF_LD_LINKER_OPTS_STAGE2="-bitcode_bundle" \
-  MergeObjsArgs="-r -bitcode_bundle" \
   ./configure --target="${TARGET}" \
               --prefix="${INSTALL_DIR}/${TARGET}" \
               --disable-large-address-space \
               --with-ffi-includes="${INSTALL_DIR}/${TARGET}/include" \
-              --with-ffi-libraries="${INSTALL_DIR}/${TARGET}/lib"
+              --with-ffi-libraries="${INSTALL_DIR}/${TARGET}/lib" \
+              CONF_CC_OPTS_STAGE2="-fembed-bitcode" \
+              CONF_CXX_OPTS_STAGE2="-fembed-bitcode" \
+              CONF_LD_LINKER_OPTS_STAGE2="-bitcode_bundle" \
+              MergeObjsArgs="-r -bitcode_bundle" \
+
 }
 
 ghc_build () {
