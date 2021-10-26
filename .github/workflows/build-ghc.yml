@@ -11,12 +11,9 @@ jobs:
     steps:
       - run: uname -a
       - uses: actions/checkout@v2
-      - run: brew install automake llvm ghc cabal-install
+      - run: ./start deps
       - run: ./start toolchain
-      - run: ./start ghc download
-      - run: ./start ghc patch
-      - run: ./start ghc prepare ${{ matrix.target }}
-      - run: ./start ghc build
+      - run: ./start ghc all ${{ matrix.target }}
       - run: ./start haskell build ${{ matrix.target }}
       - uses: actions/upload-artifact@v2
         with:
