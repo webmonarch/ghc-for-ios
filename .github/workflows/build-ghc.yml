@@ -18,3 +18,9 @@ jobs:
       - run: ./start ghc prepare ${{ matrix.target }}
       - run: ./start ghc build
       - run: ./start haskell build ${{ matrix.target }}
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.target }}
+          path: |
+            build/dist
+            build/hs-libs
