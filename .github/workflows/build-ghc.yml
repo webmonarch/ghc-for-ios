@@ -1,8 +1,13 @@
 name: build-ghc
 on: [push, pull_request]
 jobs:
-  build-x86_64-apple-ios:
+  build-ghc:
     runs-on: macos-11
+    strategy:
+      matrix:
+        target:
+          - x86_64-apple-ios
+          - aarch64-apple-ios
     steps:
       - run: uname -a
       - uses: actions/checkout@v2
@@ -10,5 +15,6 @@ jobs:
       - run: ./start toolchain
       - run: ./start ghc download
       - run: ./start ghc patch
-      - run: 2>&1 ./start ghc prepare x86_64-apple-ios
+      - run: ./start ghc prepare ${{ matrix.target }}
       - run: ./start ghc build
+      - run: ./start haskell build ${{ matrix.target }}
