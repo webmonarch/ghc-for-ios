@@ -1,0 +1,14 @@
+name: build-ghc
+on: [push, pull_request]
+jobs:
+  build-x86_64-apple-ios:
+    runs-on: macos-11
+    steps:
+      - run: uname -a
+      - uses: actions/checkout@v2
+      - run: brew install automake llvm ghc cabal-install
+      - run: ./start toolchain
+      - run: ./start ghc download
+      - run: ./start ghc patch
+      - run: 2>&1 ./start ghc prepare x86_64-apple-ios
+      - run: ./start ghc build
