@@ -1,8 +1,9 @@
 Cross Compile GHC for iOS
 =========================
 
-Scripts and notes on cross-compiling [The Glasgow Haskell Compiler](https://www.haskell.org/ghc/) targeting iOS
-(device [aarch64/arm64] and simulator [x86_64]) with the goal of writing iOS applications in (largely) Haskell.
+Scripts and notes on cross-compiling [The Glasgow Haskell Compiler](https://www.haskell.org/ghc/) on macOS x86_64 
+targeting iOS (device [aarch64/arm64] and simulator [x86_64]) with the goal of writing iOS applications in (largely) 
+Haskell.
 
 ## Why
 
@@ -38,7 +39,7 @@ This was developed/tested on:
   * iPhone 12 Pro (real device)
   * iPhone 12 Pro (simulator)
 
-## Getting Started
+## Quick Start
 
 Overall, we are:
 
@@ -50,49 +51,41 @@ Overall, we are:
 6. Run on simulator!
 7. Run on device!
 
-### Dependencies
-
-* Need Xcode (developed on Xcode 13.0 / macOS Big Sur)
-* Install Homebrew deps
-
 ```bash
-# llvm toolchain (opt, llc) used by GHC. Any modern version should work
-brew install llvm
+#
+# DEPENDENCIES
+#
 
-# base GHC installation to bootstrap the cross-compilation of GHC
-brew install ghc cabal-install
-```
+# You need to be on macOS, have Xcode and Homebrew installed
 
-### Setup Toolchain
+# brew install automake llvm ghc cabal-install 
+./start deps 
 
-We create a set of specially named wrapper scripts (naming convention used by autotools) which delegates to Xcode's 
-`xcrun`.
-
-```bash
-# create wrapper scripts and soft-links
+# create toolchain wrappers for automake
 ./start toolchain
 
-# add toolchain wrappers to PATH
-# export PATH=$PWD/build/toolchain:$PATH
-eval "$(./start bash)"
+#
+# GHC
+#
+
+# Clean build x86_64-apple-ios (simulator)
+# Or can specify aarch64-apple-ios (device)
+./start ghc all x86_64-apple-ios 2>&1 | tee ghc.$(date +%F_%T).log
+
+#
+# HASKELL
+#
+
+# Build Haskell staticlib for x86_64-apple-ios (simulator)
+# Or can specify aarch64-apple-ios (device)
+./start haskell build x86_64-apple-ios
 ```
 
-### Build GHC
+The `./start` script is just a helper. See `ghc_patch` and `ghc_prepare` in [./start](./start) for the details.
 
-```bash
-./start ghc download
-./start ghc patch
-./start ghc prepare 2>&1 | tee prepare.$(date +%F_%T).log
-./start ghc build 2>&1 | tee build.$(date +%F_%T).log
-```
+## Setup Xcode Project
 
-### Build Haskell Library
-
-```bash
-./start haskell all
-```
-
-### Setup Xcode Project
+You can use the provided iOS project at [test/ios-project](test/ios-project) or follow these steps for a new project:
 
 1. Create Swift/SwiftUI iOS App
 2. Add bridging header
@@ -101,8 +94,6 @@ eval "$(./start bash)"
 5. Add "Other Linker Flags": `-lhs`
 6. Add "Library Search Paths": `$(SRCROOT)/<PATH>/build/hs-libs/$(CURRENT_ARCH)`
 7. Add `libiconv.tbd` to Frameworks
-
-### Run!
 
 Press play!
 
@@ -156,10 +147,10 @@ References:
 
 - [x] Build and run on simulator
 - [x] Build and run on device
+- [x] Parameterize which version to build (x86_64 vs aarch64)
+- [x] Create 'all' targets to do everything
 - [ ] How to clear allocated memory
-- [ ] Parameterize which version to build (x86_64 vs aarch64)
 - [ ] Will Apple accept an Haskell project?
-- [ ] Create 'all' targets to do everything
 - [ ] Do we need libffi anymore?
 - [ ] Add test suite
 - [ ] explain aarch64 and arm64

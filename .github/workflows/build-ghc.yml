@@ -1,0 +1,23 @@
+name: build-ghc
+on: [push, pull_request]
+jobs:
+  build-ghc:
+    runs-on: macos-11
+    strategy:
+      matrix:
+        target:
+          - x86_64-apple-ios
+          - aarch64-apple-ios
+    steps:
+      - run: uname -a
+      - uses: actions/checkout@v2
+      - run: ./start deps
+      - run: ./start toolchain
+      - run: ./start ghc all ${{ matrix.target }}
+      - run: ./start haskell build ${{ matrix.target }}
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.target }}
+          path: |
+            build/dist
+            build/hs-libs
