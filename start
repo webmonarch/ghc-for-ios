@@ -186,6 +186,9 @@ ghc_generate_patch () {
   find . -type f -name '*.og' | while IFS= read -r f; do
     diff -u "$f" "${f%.og}" >> "${GHC_PATCH_PATH}" || true
   done
+
+  sed -i '' -E 's|[[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2} [[:digit:]]{2}:[[:digit:]]{2}:[[:digit:]]{2}.[[:digit:]]{9} -?[[:digit:]]{4}$|2021-06-29 00:24:51.000000000 -0700|' "${GHC_PATCH_PATH}"
+
 }
 
 ghc_prepare () {
