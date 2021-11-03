@@ -18,3 +18,86 @@
  ,("i386-apple-ios", ("e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-f64:32:64-f80:128-n8:16:32-S128", "yonah", ""))
  ,("x86_64-apple-ios", ("e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128", "core2", ""))
  ,("amd64-portbld-freebsd", ("e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128", "x86-64", ""))
+--- ./utils/hp2ps/ghc.mk.og	2021-06-29 00:24:51.000000000 -0700
++++ ./utils/hp2ps/ghc.mk	2021-06-29 00:24:51.000000000 -0700
+@@ -31,6 +31,7 @@
+ utils/hp2ps_dist-install_INSTALL_INPLACE = NO
+ utils/hp2ps_dist-install_SHELL_WRAPPER              = YES
+ utils/hp2ps_dist-install_INSTALL_SHELL_WRAPPER_NAME = $(utils/hp2ps_dist_INSTALL_SHELL_WRAPPER_NAME)
++utils/hp2ps_dist-install_CC_OPTS += -fembed-bitcode
+ 
+ ifeq "$(Stage1Only)" "YES"
+ utils/hp2ps_dist_INSTALL         = YES
+--- ./utils/hsc2hs/ghc.mk.og	2021-06-29 00:24:51.000000000 -0700
++++ ./utils/hsc2hs/ghc.mk	2021-06-29 00:24:51.000000000 -0700
+@@ -10,6 +10,8 @@
+ utils/hsc2hs_dist-install_SHELL_WRAPPER = YES
+ utils/hsc2hs_dist-install_INSTALL_INPLACE = NO
+ 
++utils/hsc2hs_dist-install_EXTRA_CC_OPTS += -fembed-bitcode
++
+ ifeq "$(Stage1Only)" "YES"
+ utils/hsc2hs_dist_INSTALL         = YES
+ utils/hsc2hs_dist-install_INSTALL = NO
+--- ./utils/iserv/ghc.mk.og	2021-06-29 00:24:51.000000000 -0700
++++ ./utils/iserv/ghc.mk	2021-06-29 00:24:51.000000000 -0700
+@@ -69,6 +69,8 @@
+ utils/iserv_stage2_p_INSTALL_INPLACE = YES
+ utils/iserv_stage2_dyn_INSTALL_INPLACE = YES
+ 
++utils/iserv_stage2_EXTRA_CC_OPTS += -fembed-bitcode
++
+ ifeq "$(CLEANING)" "YES"
+ 
+ NEED_iserv = YES
+--- ./utils/unlit/ghc.mk.og	2021-06-29 00:24:51.000000000 -0700
++++ ./utils/unlit/ghc.mk	2021-06-29 00:24:51.000000000 -0700
+@@ -21,6 +21,7 @@
+ utils/unlit_dist-install_PROGNAME = $(utils/unlit_dist_PROGNAME)
+ utils/unlit_dist-install_TOPDIR = $(utils/unlit_dist_TOPDIR)
+ utils/unlit_dist-install_INSTALL_INPLACE = NO
++utils/unlit_dist-install_CC_OPTS = -fembed-bitcode
+ 
+ ifeq "$(Stage1Only)" "YES"
+ utils/unlit_dist_INSTALL         = YES
+--- ./compiler/main/DriverPipeline.hs.og	2021-06-29 00:24:51.000000000 -0700
++++ ./compiler/main/DriverPipeline.hs	2021-06-29 00:24:51.000000000 -0700
+@@ -938,6 +938,9 @@
+                                  , not (any (isInfixOf "-mcpu") (getOpts dflags opt_lc)) ]
+     ++ [("", "-mattr=" ++ attrs) | not (null attrs) ]
+ 
++    -- include bitcode
++    ++ [("--lto-embed-bitcode=optimized", "--lto-embed-bitcode=optimized") ]
++
+   where target = platformMisc_llvmTarget $ platformMisc dflags
+         Just (LlvmTarget _ mcpu mattr) = lookup target (llvmTargets $ llvmConfig dflags)
+ 
+@@ -1859,7 +1862,7 @@
+                                ArchARM {}  -> True
+                                ArchAArch64 -> True
+                                _ -> False
+-                          then ["-Wl,-no_compact_unwind"]
++                          then []
+                           else [])
+ 
+                       -- '-Wl,-read_only_relocs,suppress'
+@@ -1896,7 +1899,7 @@
+                           --  libraries during runInjectRpaths phase.
+                           --
+                           --  See Note [Dynamic linking on macOS].
+-                          then [ "-Wl,-dead_strip_dylibs", "-Wl,-headerpad,8000" ]
++                          then []
+                           else [])
+                     ))
+ 
+--- ./libffi/ghc.mk.og	2021-06-29 00:24:51.000000000 -0700
++++ ./libffi/ghc.mk	2021-06-29 00:24:51.000000000 -0700
+@@ -94,7 +94,7 @@
+ 	    AR=$(AR_STAGE1) \
+ 	    NM=$(NM) \
+ 	    RANLIB=$(REAL_RANLIB_CMD) \
+-        CFLAGS="$(SRC_CC_OPTS) $(CONF_CC_OPTS_STAGE1) -w" \
++        CFLAGS="$(SRC_CC_OPTS) $(CONF_CC_OPTS_STAGE1) -w -fembed-bitcode" \
+         LDFLAGS="$(SRC_LD_OPTS) -w" \
+         "$(SHELL)" ./configure \
+ 	          --prefix=$(TOP)/libffi/build/inst \
