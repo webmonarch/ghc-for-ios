@@ -2,6 +2,7 @@
 /build/
 
 /*.log
+/build-*.zip
 
 # ignore xcode userdate
 **/*.xcodeproj/**/xcuserdata/
