@@ -307,7 +307,7 @@
 				);
 				LIBRARY_SEARCH_PATHS = "$(SRCROOT)/../../build/hs-libs/$(CURRENT_ARCH)";
 				MARKETING_VERSION = 1.0;
-				OTHER_LDFLAGS = "-lhs";
+				OTHER_LDFLAGS = "-lHShaskell-project";
 				PRODUCT_BUNDLE_IDENTIFIER = "codes.webb.ios-project";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -343,7 +343,7 @@
 				);
 				LIBRARY_SEARCH_PATHS = "$(SRCROOT)/../../build/hs-libs/$(CURRENT_ARCH)";
 				MARKETING_VERSION = 1.0;
-				OTHER_LDFLAGS = "-lhs";
+				OTHER_LDFLAGS = "-lHShaskell-project";
 				PRODUCT_BUNDLE_IDENTIFIER = "codes.webb.ios-project";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

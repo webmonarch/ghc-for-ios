@@ -22,6 +22,8 @@ SELF="$0"
 PROJECT_DIR="${SCRIPT_DIR}"
 BUILD_DIR="${SCRIPT_DIR}/build"
 INSTALL_DIR="${BUILD_DIR}/dist"
+HASKELL_DIR="${SCRIPT_DIR}/test/haskell-project"
+
 
 # toolchain wrapper
 TOOLCHAIN_BUILD_DIR="${BUILD_DIR}/toolchain"
@@ -46,6 +48,8 @@ HASKELL_BUILD_DIR=${BUILD_DIR}/hs-libs
 bash_eval () {
   echo export PATH=${TOOLCHAIN_BIN_DIR}:\$PATH
   echo export PATH=${LLVM_BIN_DIR}:\$PATH
+  echo export PATH=${INSTALL_DIR}/x86_64-apple-ios/bin:\$PATH
+  echo export PATH=${INSTALL_DIR}/aarch64-apple-ios/bin:\$PATH
 }
 
 # PATH exports
@@ -86,7 +90,7 @@ cmd=${name##*-}
 target=${name%-*}
 case $name in
  *-cabal)
-  fcommon="--builddir=dist/${target}"
+  fcommon=""
   fcompile=" --with-ghc=${target}-ghc"
   fcompile+=" --with-ghc-pkg=${target}-ghc-pkg"
   fcompile+=" --with-gcc=${target}-clang"
@@ -218,23 +222,24 @@ ghc_build () {
 
 haskell_build () {
   TARGET=${1:-aarch64-apple-ios}
-  PLATFORM=$(echo "$TARGET" | cut -d- -f1)
+  CPU=$(echo "$TARGET" | cut -d- -f1)
+  OS=$(echo "$TARGET" | cut -d- -f3)
+
+  PLATFORM=$CPU
   if [[ "aarch64" = "${PLATFORM}" ]]; then
     PLATFORM="arm64"
   fi
   BUILD_OUT="${HASKELL_BUILD_DIR}/${PLATFORM}"
-  GHC="${INSTALL_DIR}/${TARGET}/bin/${TARGET}-ghc"
+  CABAL_BUILD_OUT="${HASKELL_DIR}/dist-newstyle/build/${CPU}-${OS}/ghc-8.10.7/haskell-project-0.1.0.0/build"
 
   command rm -rf "${BUILD_OUT}"
   mkdir -p "${BUILD_OUT}"
 
-  $GHC \
-    -odir "${BUILD_OUT}" \
-    -hidir "${BUILD_OUT}" \
-    -stubdir "${BUILD_OUT}" \
-    -lffi -L"${INSTALL_DIR}/${TARGET}/lib" \
-    -staticlib -o "${BUILD_OUT}/libhs.a" \
-    test/haskell-project/Lib.hs
+  pushd "${HASKELL_DIR}"
+  "${TARGET}-cabal" build -v --disable-shared --enable-static
+
+  cp "${CABAL_BUILD_OUT}/Lib_stub.h" "${BUILD_OUT}"
+  cp "${CABAL_BUILD_OUT}/libHShaskell-project-0.1.0.0-inplace-ghc8.10.7.a" "${BUILD_OUT}/libHShaskell-project.a"
 }
 
 help () {
